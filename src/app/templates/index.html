@@ -87,13 +87,29 @@
 
     <div class="card">
         <h2>Configuration</h2>
+
+        {% if orgs %}
+        {# Step 2: Org selection (session key validated, orgs fetched) #}
+        <p style="color: #2ecc71; margin-bottom: 12px;">Session key valid. Select your organization:</p>
         <form method="post" action="/config">
-            <label class="label">Session Key</label>
-            <textarea name="session_key" rows="3" placeholder="Paste your Claude session key here">{{ session_key or "" }}</textarea>
-            <label class="label">Organization ID</label>
-            <input type="text" name="org_id" value="{{ org_id or '' }}" placeholder="e.g. abc123-def456-...">
+            <input type="hidden" name="session_key" value="{{ session_key }}">
+            <label class="label">Organization</label>
+            <select name="org_id" style="width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; background: #0f3460; border: 1px solid #1a1a5e; color: #e0e0e0; border-radius: 4px;">
+                {% for org in orgs %}
+                <option value="{{ org.uuid }}" {% if org.uuid == org_id %}selected{% endif %}>{{ org.name }}</option>
+                {% endfor %}
+            </select>
             <button type="submit">Save &amp; Fetch Now</button>
         </form>
+        {% else %}
+        {# Step 1: Session key input #}
+        <form method="post" action="/config/session-key">
+            <label class="label">Session Key</label>
+            <textarea name="session_key" rows="3" placeholder="Paste your Claude session key here">{{ session_key or "" }}</textarea>
+            <button type="submit">Validate &amp; Fetch Orgs</button>
+        </form>
+        {% endif %}
+
         {% if saved %}
         <p class="success">Credentials saved. Fetching usage...</p>
         {% endif %}

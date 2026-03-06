@@ -25,12 +25,43 @@ class UsageData:
         }
 
 
+@dataclass
+class Organization:
+    uuid: str
+    name: str
+
+    @property
+    def display_name(self) -> str:
+        return self.name if self.name else self.uuid
+
+
 class ClaudeClient:
     BASE_URL = "https://claude.ai/api"
 
-    def __init__(self, session_key: str, org_id: str):
+    def __init__(self, session_key: str, org_id: str = ""):
         self.session_key = session_key
         self.org_id = org_id
+
+    async def fetch_organizations(self) -> list[Organization]:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{self.BASE_URL}/organizations",
+                headers={
+                    "Accept": "application/json",
+                    "Cookie": f"sessionKey={self.session_key}",
+                },
+                timeout=30.0,
+            )
+            if resp.status_code in (401, 403):
+                raise AuthError("Session key expired or unauthorized")
+            resp.raise_for_status()
+            orgs = []
+            for item in resp.json():
+                orgs.append(Organization(
+                    uuid=item.get("uuid", item.get("id", "")),
+                    name=item.get("name", ""),
+                ))
+            return orgs
 
     async def fetch_usage(self) -> UsageData:
         async with httpx.AsyncClient() as client:

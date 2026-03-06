@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
 
+from app.claude_client import ClaudeClient, AuthError
 from app.config import ConfigManager
 from app.scheduler import UsageScheduler
 
@@ -73,6 +74,7 @@ async def index(request: Request):
         "last_usage": cfg.get("last_usage"),
         "session_key": cfg.get("session_key", ""),
         "org_id": cfg.get("org_id", ""),
+        "orgs": None,
         "saved": False,
     })
 
@@ -98,6 +100,59 @@ async def logout():
     return response
 
 
+@app.post("/config/session-key")
+async def fetch_orgs(request: Request, session_key: str = Form(...)):
+    if not _is_authenticated(request):
+        return RedirectResponse(url="/", status_code=303)
+
+    session_key = session_key.strip()
+    try:
+        client = ClaudeClient(session_key)
+        orgs = await client.fetch_organizations()
+    except AuthError:
+        cfg = config.load()
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "has_credentials": config.has_credentials(),
+            "last_fetch": cfg.get("last_fetch"),
+            "last_push": cfg.get("last_push"),
+            "last_error": "Invalid or expired session key",
+            "last_usage": cfg.get("last_usage"),
+            "session_key": session_key,
+            "org_id": cfg.get("org_id", ""),
+            "orgs": None,
+            "saved": False,
+        })
+    except Exception as e:
+        cfg = config.load()
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "has_credentials": config.has_credentials(),
+            "last_fetch": cfg.get("last_fetch"),
+            "last_push": cfg.get("last_push"),
+            "last_error": f"Error fetching orgs: {e}",
+            "last_usage": cfg.get("last_usage"),
+            "session_key": session_key,
+            "org_id": cfg.get("org_id", ""),
+            "orgs": None,
+            "saved": False,
+        })
+
+    cfg = config.load()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "has_credentials": config.has_credentials(),
+        "last_fetch": cfg.get("last_fetch"),
+        "last_push": cfg.get("last_push"),
+        "last_error": cfg.get("last_error"),
+        "last_usage": cfg.get("last_usage"),
+        "session_key": session_key,
+        "org_id": cfg.get("org_id", ""),
+        "orgs": [{"uuid": o.uuid, "name": o.display_name} for o in orgs],
+        "saved": False,
+    })
+
+
 @app.post("/config")
 async def save_config(request: Request, session_key: str = Form(...), org_id: str = Form(...)):
     if not _is_authenticated(request):
@@ -116,6 +171,7 @@ async def save_config(request: Request, session_key: str = Form(...), org_id: st
         "last_usage": cfg.get("last_usage"),
         "session_key": cfg.get("session_key", ""),
         "org_id": cfg.get("org_id", ""),
+        "orgs": None,
         "saved": True,
     })
 
