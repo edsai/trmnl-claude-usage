@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TRMNL Claude Usage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 20px auto; padding: 0 20px; background: #1a1a2e; color: #e0e0e0; }
+        h1 { color: #d4a574; font-size: 1.4em; }
+        h2 { color: #d4a574; font-size: 1.1em; margin-top: 24px; }
+        .card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 16px; margin: 12px 0; }
+        .row { display: flex; justify-content: space-between; margin: 4px 0; }
+        .label { color: #a0a0a0; }
+        .value { font-weight: bold; }
+        .ok { color: #2ecc71; }
+        .warn { color: #e67e22; }
+        .err { color: #e74c3c; }
+        textarea, input[type=text] { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; background: #0f3460; border: 1px solid #1a1a5e; color: #e0e0e0; border-radius: 4px; font-family: monospace; }
+        button { background: #d4a574; color: #1a1a2e; border: none; padding: 10px 24px; cursor: pointer; border-radius: 4px; font-weight: bold; margin-top: 8px; }
+        button:hover { background: #c4955a; }
+        .btn-secondary { background: #0f3460; color: #e0e0e0; }
+        .success { color: #2ecc71; margin-top: 8px; }
+        a { color: #d4a574; }
+    </style>
+</head>
+<body>
+    <h1>TRMNL Claude Usage</h1>
+
+    <div class="card">
+        <h2>Status</h2>
+        <div class="row">
+            <span class="label">Session Key</span>
+            <span class="value {% if has_credentials %}ok{% else %}err{% endif %}">
+                {{ "Configured" if has_credentials else "Not Set" }}
+            </span>
+        </div>
+        <div class="row">
+            <span class="label">Last Fetch</span>
+            <span class="value">{{ last_fetch or "Never" }}</span>
+        </div>
+        <div class="row">
+            <span class="label">Last Push to TRMNL</span>
+            <span class="value">{{ last_push or "Never" }}</span>
+        </div>
+        {% if last_error %}
+        <div class="row">
+            <span class="label">Last Error</span>
+            <span class="value err">{{ last_error }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if last_usage %}
+    <div class="card">
+        <h2>Current Usage</h2>
+        <div class="row">
+            <span class="label">Session</span>
+            <span class="value">{{ last_usage.session_pct }}%</span>
+        </div>
+        <div class="row">
+            <span class="label">Opus Weekly</span>
+            <span class="value">{{ last_usage.opus_weekly_pct }}%</span>
+        </div>
+        <div class="row">
+            <span class="label">Sonnet Weekly</span>
+            <span class="value">{{ last_usage.sonnet_weekly_pct }}%</span>
+        </div>
+        {% if last_usage.projected_at_reset is defined %}
+        <div class="row">
+            <span class="label">Projected at Reset</span>
+            <span class="value">~{{ last_usage.projected_at_reset }}%</span>
+        </div>
+        <div class="row">
+            <span class="label">Today</span>
+            <span class="value">{{ last_usage.today_usage }}%</span>
+        </div>
+        <div class="row">
+            <span class="label">Avg Daily Pace</span>
+            <span class="value">{{ last_usage.avg_daily_pace }}%/day</span>
+        </div>
+        <div class="row">
+            <span class="label">Budget/Day</span>
+            <span class="value">{{ last_usage.budget_per_day }}%/day</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2>Configuration</h2>
+        <form method="post" action="/config">
+            <label class="label">Session Key</label>
+            <textarea name="session_key" rows="3" placeholder="Paste your Claude session key here">{{ session_key or "" }}</textarea>
+            <label class="label">Organization ID</label>
+            <input type="text" name="org_id" value="{{ org_id or '' }}" placeholder="e.g. abc123-def456-...">
+            <button type="submit">Save &amp; Fetch Now</button>
+        </form>
+        {% if saved %}
+        <p class="success">Credentials saved. Fetching usage...</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Actions</h2>
+        <form method="post" action="/fetch" style="display:inline;">
+            <button type="submit" class="btn-secondary">Fetch Now</button>
+        </form>
+        <form method="post" action="/logout" style="display:inline; margin-left: 8px;">
+            <button type="submit" class="btn-secondary">Logout</button>
+        </form>
+    </div>
+</body>
+</html>
