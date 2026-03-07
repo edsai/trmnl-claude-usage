@@ -1,19 +1,11 @@
 services:
   trmnl-claude:
     container_name: trmnl-claude
-    build:
-      context: /var/docker/trmnl-claude/src
-      dockerfile: /home/esaipetch/dockerfiles-mserver/trmnl-claude/Dockerfile
+    build: ./src
     restart: unless-stopped
     env_file:
-      - /var/docker/trmnl-claude/.env
+      - .env
     ports:
       - 8085:8085
     volumes:
-      - /var/docker/trmnl-claude/data:/app/data
-    networks:
-      - npm-network
-
-networks:
-  npm-network:
-    external: true
+      - ./data:/app/data

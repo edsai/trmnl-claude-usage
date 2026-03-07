@@ -5,15 +5,9 @@ import httpx
 
 
 class TRMNLClient:
-    BASE_URL = "https://trmnl.com/api/custom_plugins"
-
-    def __init__(self, webhook_uuid: str, config_url: str = "http://192.168.200.7:8085"):
-        self.webhook_uuid = webhook_uuid
+    def __init__(self, webhook_url: str, config_url: str = "http://localhost:8085"):
+        self.webhook_url = webhook_url
         self.config_url = config_url
-
-    @property
-    def webhook_url(self) -> str:
-        return f"{self.BASE_URL}/{self.webhook_uuid}"
 
     def build_payload(
         self,
@@ -35,6 +29,8 @@ class TRMNLClient:
                 "today_usage": projections.get("today_usage", 0),
                 "avg_daily_pace": projections.get("avg_daily_pace", 0),
                 "budget_per_day": projections.get("budget_per_day", 0),
+                "hits_limit_date": projections.get("hits_limit_date", ""),
+                "hits_limit_days": projections.get("hits_limit_days", ""),
                 "updated_at": now.strftime("%-I:%M %p"),
                 "error_message": error_message,
                 "config_url": self.config_url,

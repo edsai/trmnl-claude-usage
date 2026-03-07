@@ -1,8 +1,9 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-import httpx
+from curl_cffi import requests as cffi_requests
 
 
 @dataclass
@@ -35,6 +36,18 @@ class Organization:
         return self.name if self.name else self.uuid
 
 
+def _cffi_get(url: str, session_key: str) -> cffi_requests.Response:
+    return cffi_requests.get(
+        url,
+        headers={
+            "Accept": "application/json",
+            "Cookie": f"sessionKey={session_key}",
+        },
+        impersonate="chrome",
+        timeout=30,
+    )
+
+
 class ClaudeClient:
     BASE_URL = "https://claude.ai/api"
 
@@ -43,57 +56,47 @@ class ClaudeClient:
         self.org_id = org_id
 
     async def fetch_organizations(self) -> list[Organization]:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.BASE_URL}/organizations",
-                headers={
-                    "Accept": "application/json",
-                    "Cookie": f"sessionKey={self.session_key}",
-                },
-                timeout=30.0,
-            )
-            if resp.status_code in (401, 403):
-                raise AuthError("Session key expired or unauthorized")
-            resp.raise_for_status()
-            orgs = []
-            for item in resp.json():
-                orgs.append(Organization(
-                    uuid=item.get("uuid", item.get("id", "")),
-                    name=item.get("name", ""),
-                ))
-            return orgs
+        resp = await asyncio.to_thread(
+            _cffi_get, f"{self.BASE_URL}/organizations", self.session_key
+        )
+        if resp.status_code in (401, 403):
+            raise AuthError("Session key expired or unauthorized")
+        resp.raise_for_status()
+        orgs = []
+        for item in resp.json():
+            orgs.append(Organization(
+                uuid=item.get("uuid", item.get("id", "")),
+                name=item.get("name", ""),
+            ))
+        return orgs
 
     async def fetch_usage(self) -> UsageData:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.BASE_URL}/organizations/{self.org_id}/usage",
-                headers={
-                    "Accept": "application/json",
-                    "Cookie": f"sessionKey={self.session_key}",
-                },
-                timeout=30.0,
-            )
-            if resp.status_code in (401, 403):
-                raise AuthError("Session key expired or unauthorized")
-            resp.raise_for_status()
-            return self.parse_response(resp.json())
+        resp = await asyncio.to_thread(
+            _cffi_get,
+            f"{self.BASE_URL}/organizations/{self.org_id}/usage",
+            self.session_key,
+        )
+        if resp.status_code in (401, 403):
+            raise AuthError("Session key expired or unauthorized")
+        resp.raise_for_status()
+        return self.parse_response(resp.json())
 
     @staticmethod
     def parse_response(data: dict[str, Any]) -> UsageData:
         usage = UsageData()
 
-        five_hour = data.get("five_hour", {})
+        five_hour = data.get("five_hour") or {}
         usage.session_pct = _parse_utilization(five_hour.get("utilization", 0))
         usage.session_reset = _parse_iso_date(five_hour.get("resets_at"))
 
-        seven_day = data.get("seven_day", {})
+        seven_day = data.get("seven_day") or {}
         usage.weekly_pct = _parse_utilization(seven_day.get("utilization", 0))
         usage.weekly_reset = _parse_iso_date(seven_day.get("resets_at"))
 
-        opus = data.get("seven_day_opus", {})
+        opus = data.get("seven_day_opus") or {}
         usage.opus_weekly_pct = _parse_utilization(opus.get("utilization", 0))
 
-        sonnet = data.get("seven_day_sonnet", {})
+        sonnet = data.get("seven_day_sonnet") or {}
         usage.sonnet_weekly_pct = _parse_utilization(sonnet.get("utilization", 0))
 
         return usage

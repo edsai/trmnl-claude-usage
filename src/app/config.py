@@ -22,6 +22,7 @@ class ConfigManager:
         return {
             "session_key": None,
             "org_id": None,
+            "webhook_url": None,
             "last_fetch": None,
             "last_push": None,
             "last_usage": None,
@@ -36,6 +37,11 @@ class ConfigManager:
         cfg = self.load()
         cfg["session_key"] = session_key
         cfg["org_id"] = org_id
+        self._save(cfg)
+
+    def save_webhook_url(self, webhook_url: str) -> None:
+        cfg = self.load()
+        cfg["webhook_url"] = webhook_url
         self._save(cfg)
 
     def has_credentials(self) -> bool:

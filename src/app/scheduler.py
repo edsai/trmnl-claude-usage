@@ -11,21 +11,27 @@ logger = logging.getLogger(__name__)
 
 
 class UsageScheduler:
-    def __init__(self, webhook_uuid: str, data_dir: str = "/app/data"):
+    def __init__(self, data_dir: str = "/app/data"):
         self.config = ConfigManager(data_dir=data_dir)
         self.projection = ProjectionEngine(data_dir=data_dir)
-        self.trmnl = TRMNLClient(webhook_uuid=webhook_uuid)
+
+    def _get_trmnl(self, cfg: dict) -> TRMNLClient | None:
+        webhook_url = cfg.get("webhook_url") or ""
+        if not webhook_url:
+            return None
+        return TRMNLClient(webhook_url=webhook_url)
 
     async def fetch_and_push(self) -> None:
         cfg = self.config.load()
+        trmnl = self._get_trmnl(cfg)
 
         if not self.config.has_credentials():
             logger.info("No credentials configured, pushing setup_required")
-            payload = self.trmnl.build_payload("setup_required", {}, {})
-            try:
-                await self.trmnl.push(payload)
-            except Exception as e:
-                logger.error(f"Failed to push setup_required: {e}")
+            if trmnl:
+                try:
+                    await trmnl.push(trmnl.build_payload("setup_required", {}, {}))
+                except Exception as e:
+                    logger.error(f"Failed to push setup_required: {e}")
             return
 
         session_key = cfg["session_key"]
@@ -50,36 +56,37 @@ class UsageScheduler:
             )
 
             usage_dict = {
-                "session_pct": usage.session_pct,
+                "session_pct": round(usage.session_pct),
                 "session_reset": session_reset_str,
-                "opus_weekly_pct": usage.opus_weekly_pct,
-                "sonnet_weekly_pct": usage.sonnet_weekly_pct,
+                "opus_weekly_pct": round(usage.opus_weekly_pct),
+                "sonnet_weekly_pct": round(usage.sonnet_weekly_pct),
             }
 
             self.config.save_last_usage(usage_dict | projections)
 
-            payload = self.trmnl.build_payload("healthy", usage_dict, projections)
-            pushed = await self.trmnl.push(payload)
-            if pushed:
-                self.config.update_push_time()
-                logger.info(f"Pushed usage: session={usage.session_pct}%, weekly={usage.weekly_pct}%")
-            else:
-                logger.warning("TRMNL push returned non-200")
+            if trmnl:
+                payload = trmnl.build_payload("healthy", usage_dict, projections)
+                pushed = await trmnl.push(payload)
+                if pushed:
+                    self.config.update_push_time()
+                    logger.info(f"Pushed usage: session={usage.session_pct}%, weekly={usage.weekly_pct}%")
+                else:
+                    logger.warning("TRMNL push returned non-200")
 
         except AuthError as e:
             logger.warning(f"Auth error: {e}")
             self.config.save_last_error(str(e))
-            last_fetch = cfg.get("last_fetch")
-            last_valid = _format_datetime(last_fetch) if last_fetch else None
-            payload = self.trmnl.build_payload(
-                "expired", {}, {},
-                error_message="Session Key Expired",
-                last_valid=last_valid,
-            )
-            try:
-                await self.trmnl.push(payload)
-            except Exception:
-                pass
+            if trmnl:
+                last_fetch = cfg.get("last_fetch")
+                last_valid = _format_datetime(last_fetch) if last_fetch else None
+                try:
+                    await trmnl.push(trmnl.build_payload(
+                        "expired", {}, {},
+                        error_message="Session Key Expired",
+                        last_valid=last_valid,
+                    ))
+                except Exception:
+                    pass
 
         except Exception as e:
             logger.error(f"Fetch error: {e}")

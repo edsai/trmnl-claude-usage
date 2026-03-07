@@ -16,12 +16,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 DATA_DIR = os.environ.get("DATA_DIR", "/app/data")
-WEBHOOK_UUID = os.environ.get("TRMNL_WEBHOOK_UUID", "")
 WEB_PASSWORD = os.environ.get("WEB_PASSWORD", "changeme")
-FETCH_INTERVAL_MINUTES = int(os.environ.get("FETCH_INTERVAL_MINUTES", "30"))
+FETCH_INTERVAL_MINUTES = int(os.environ.get("FETCH_INTERVAL_MINUTES", "15"))
+
+# Load TRMNL Liquid template for display in setup instructions
+_template_path = os.path.join(os.path.dirname(__file__), "trmnl-template.html")
+try:
+    with open(_template_path) as f:
+        TRMNL_TEMPLATE = f.read()
+except FileNotFoundError:
+    TRMNL_TEMPLATE = ""
 
 config = ConfigManager(data_dir=DATA_DIR)
-usage_scheduler = UsageScheduler(webhook_uuid=WEBHOOK_UUID, data_dir=DATA_DIR)
+usage_scheduler = UsageScheduler(data_dir=DATA_DIR)
 serializer = URLSafeSerializer(WEB_PASSWORD)
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 
@@ -59,13 +66,8 @@ def _is_authenticated(request: Request) -> bool:
         return False
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    if not _is_authenticated(request):
-        return templates.TemplateResponse("login.html", {"request": request, "error": None})
-
-    cfg = config.load()
-    return templates.TemplateResponse("index.html", {
+def _base_context(request: Request, cfg: dict, **overrides) -> dict:
+    ctx = {
         "request": request,
         "has_credentials": config.has_credentials(),
         "last_fetch": cfg.get("last_fetch"),
@@ -76,7 +78,21 @@ async def index(request: Request):
         "org_id": cfg.get("org_id", ""),
         "orgs": None,
         "saved": False,
-    })
+        "config_error": None,
+        "webhook_url": cfg.get("webhook_url", ""),
+        "trmnl_template": TRMNL_TEMPLATE,
+    }
+    ctx.update(overrides)
+    return ctx
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    if not _is_authenticated(request):
+        return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
+    cfg = config.load()
+    return templates.TemplateResponse("index.html", _base_context(request, cfg))
 
 
 @app.post("/login")
@@ -111,46 +127,22 @@ async def fetch_orgs(request: Request, session_key: str = Form(...)):
         orgs = await client.fetch_organizations()
     except AuthError:
         cfg = config.load()
-        return templates.TemplateResponse("index.html", {
-            "request": request,
-            "has_credentials": config.has_credentials(),
-            "last_fetch": cfg.get("last_fetch"),
-            "last_push": cfg.get("last_push"),
-            "last_error": "Invalid or expired session key",
-            "last_usage": cfg.get("last_usage"),
-            "session_key": session_key,
-            "org_id": cfg.get("org_id", ""),
-            "orgs": None,
-            "saved": False,
-        })
+        return templates.TemplateResponse("index.html", _base_context(request, cfg,
+            session_key=session_key,
+            config_error="Invalid or expired session key. Please copy a fresh sessionKey cookie from claude.ai.",
+        ))
     except Exception as e:
         cfg = config.load()
-        return templates.TemplateResponse("index.html", {
-            "request": request,
-            "has_credentials": config.has_credentials(),
-            "last_fetch": cfg.get("last_fetch"),
-            "last_push": cfg.get("last_push"),
-            "last_error": f"Error fetching orgs: {e}",
-            "last_usage": cfg.get("last_usage"),
-            "session_key": session_key,
-            "org_id": cfg.get("org_id", ""),
-            "orgs": None,
-            "saved": False,
-        })
+        return templates.TemplateResponse("index.html", _base_context(request, cfg,
+            session_key=session_key,
+            config_error=f"Error fetching orgs: {e}",
+        ))
 
     cfg = config.load()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "has_credentials": config.has_credentials(),
-        "last_fetch": cfg.get("last_fetch"),
-        "last_push": cfg.get("last_push"),
-        "last_error": cfg.get("last_error"),
-        "last_usage": cfg.get("last_usage"),
-        "session_key": session_key,
-        "org_id": cfg.get("org_id", ""),
-        "orgs": [{"uuid": o.uuid, "name": o.display_name} for o in orgs],
-        "saved": False,
-    })
+    return templates.TemplateResponse("index.html", _base_context(request, cfg,
+        session_key=session_key,
+        orgs=[{"uuid": o.uuid, "name": o.display_name} for o in orgs],
+    ))
 
 
 @app.post("/config")
@@ -162,23 +154,23 @@ async def save_config(request: Request, session_key: str = Form(...), org_id: st
     await usage_scheduler.fetch_and_push()
 
     cfg = config.load()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "has_credentials": config.has_credentials(),
-        "last_fetch": cfg.get("last_fetch"),
-        "last_push": cfg.get("last_push"),
-        "last_error": cfg.get("last_error"),
-        "last_usage": cfg.get("last_usage"),
-        "session_key": cfg.get("session_key", ""),
-        "org_id": cfg.get("org_id", ""),
-        "orgs": None,
-        "saved": True,
-    })
+    return templates.TemplateResponse("index.html", _base_context(request, cfg, saved=True))
+
+
+@app.post("/config/webhook")
+async def save_webhook(request: Request, webhook_url: str = Form(...)):
+    if not _is_authenticated(request):
+        return RedirectResponse(url="/", status_code=303)
+    config.save_webhook_url(webhook_url.strip())
+    return RedirectResponse(url="/", status_code=303)
 
 
 @app.post("/fetch")
 async def manual_fetch(request: Request):
     if not _is_authenticated(request):
-        return RedirectResponse(url="/", status_code=303)
+        # Allow unauthenticated calls from localhost/private IPs
+        client_ip = request.client.host if request.client else ""
+        if client_ip not in ("127.0.0.1", "::1") and not client_ip.startswith(("192.168.", "10.", "172.")):
+            return RedirectResponse(url="/", status_code=303)
     await usage_scheduler.fetch_and_push()
     return RedirectResponse(url="/", status_code=303)

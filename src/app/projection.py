@@ -110,10 +110,34 @@ class ProjectionEngine:
         days_remaining = max(0.1, (reset_time - now).total_seconds() / 86400.0)
         return remaining / days_remaining
 
-    def compute_projections(self, current_pct: float, reset_time: datetime | None) -> dict[str, float]:
+    def hits_limit(self, current_pct: float, reset_time: datetime | None) -> tuple[str, str]:
+        """Returns (date_str, days_str) for when usage hits 100%, or ("", "") if on track."""
+        pace = self.average_daily_pace(current_pct)
+        if pace <= 0 or current_pct >= 100.0:
+            return ("", "")
+
+        remaining = 100.0 - current_pct
+        days_to_limit = remaining / pace
+
+        now = datetime.now(timezone.utc)
+        limit_dt = now + timedelta(days=days_to_limit)
+
+        # If reset happens before we'd hit the limit, we're on track
+        if reset_time and limit_dt >= reset_time:
+            return ("", "")
+
+        limit_local = limit_dt.astimezone()
+        date_str = limit_local.strftime("%a %-m/%d")
+        days_str = f"{days_to_limit:.1f} days" if days_to_limit >= 1 else f"{days_to_limit * 24:.0f} hrs"
+        return (date_str, days_str)
+
+    def compute_projections(self, current_pct: float, reset_time: datetime | None) -> dict[str, Any]:
+        limit_date, limit_days = self.hits_limit(current_pct, reset_time)
         return {
             "projected_at_reset": round(self.projected_at_reset(current_pct, reset_time), 1),
             "today_usage": round(self.today_consumption(current_pct), 1),
             "avg_daily_pace": round(self.average_daily_pace(current_pct), 1),
             "budget_per_day": round(self.remaining_budget_per_day(current_pct, reset_time), 1),
+            "hits_limit_date": limit_date,
+            "hits_limit_days": limit_days,
         }
