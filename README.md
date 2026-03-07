@@ -2,7 +2,7 @@
 
 Display your Claude Pro/Team usage stats on a [TRMNL](https://usetrmnl.com/) e-ink dashboard.
 
-<!-- ![Screenshot](screenshot.png) -->
+![TRMNL Claude Usage Dashboard](screenshot.jpg)
 
 ## Features
 
