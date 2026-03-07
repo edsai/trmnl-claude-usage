@@ -19,51 +19,18 @@ Display your Claude Pro/Team usage stats on a [TRMNL](https://usetrmnl.com/) e-i
 - A [TRMNL](https://usetrmnl.com/) account with a Private Plugin webhook
 - A Claude Pro or Team subscription on [claude.ai](https://claude.ai)
 
-## Quick Start
+## Setup
 
-```bash
-git clone https://github.com/edsai/trmnl-claude-usage.git
-cd trmnl-claude-usage
-cp .env.example .env
-# Edit .env with your values
-docker compose up -d
-```
+> This plugin has been submitted to the TRMNL marketplace. If it's available there, install it and skip to step 4.
 
-Then open `http://localhost:8085` in your browser to configure.
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `TRMNL_WEBHOOK_UUID` | Yes | — | Your TRMNL Private Plugin webhook UUID |
-| `WEB_PASSWORD` | Yes | `changeme` | Password for the web config UI |
-| `FETCH_INTERVAL_MINUTES` | No | `15` | How often to fetch usage data (minutes) |
-
-### Web UI Setup
-
-1. Open `http://localhost:8085` and log in with your `WEB_PASSWORD`
-2. Paste your `sessionKey` cookie from claude.ai (DevTools > Application > Cookies)
-3. Select your organization
-4. Enter your TRMNL webhook URL (`https://usetrmnl.com/api/custom_plugins/YOUR_UUID`)
-
-## TRMNL Plugin Setup
-
-> This plugin has been submitted to the TRMNL marketplace. If it's available there, just install it directly and skip to step 6. Otherwise, follow these steps to create a Private Plugin.
-
-### 1. Create the plugin
+### 1. Create a TRMNL Private Plugin
 
 - Go to [trmnl.com/plugins](https://trmnl.com/plugins) and click **Private Plugin**
 - Give it a name (e.g. "Claude Usage")
+- Set **Strategy** to **Webhook**
+- A **Webhook URL** will appear at the bottom of the page (starts with `https://trmnl.com/api/custom_plugins/...`) — copy this, you'll need it in step 5
 
-### 2. Set the strategy
-
-- In the plugin settings, set **Strategy** to **Webhook**
-- A **Webhook URL** will appear at the bottom of the page (starts with `https://trmnl.com/api/custom_plugins/...`)
-- Copy this URL - you'll need it in step 6
-
-### 3. Paste the markup
+### 2. Paste the markup
 
 - Click **Edit Markup**
 - You'll see tabs for **Full**, **Half horizontal**, **Half vertical**, and **Quadrant**
@@ -76,20 +43,37 @@ Then open `http://localhost:8085` in your browser to configure.
   - 4th block -> **Quadrant**
 - Save each tab
 
-### 4. Set the refresh rate
+### 3. Save the plugin
 
-- Back in plugin settings, set **Refresh rate** to **Hourly** (the app pushes data on its own schedule, TRMNL just needs to re-render periodically)
-
-### 5. Save the plugin
-
+- Set **Refresh rate** to **Hourly** (the app pushes data on its own schedule, TRMNL just re-renders periodically)
 - Click **Save**
 
-### 6. Configure the app
+### 4. Start the container
 
-- Open the web UI at `http://localhost:8085`
-- Paste the **Webhook URL** from step 2 into the TRMNL Plugin Setup section
-- Paste your Claude **sessionKey** cookie (see the "How to get your Session Key" guide in the web UI)
-- Select your organization and save
+```bash
+git clone https://github.com/edsai/trmnl-claude-usage.git
+cd trmnl-claude-usage
+cp .env.example .env
+# Edit .env — set WEB_PASSWORD to something secure
+docker compose up -d
+```
+
+### 5. Configure the app
+
+Open `http://your-server:8085` in your browser and log in with your `WEB_PASSWORD`.
+
+- **Webhook URL** — paste the URL from step 1 into the TRMNL Plugin Setup section and click Save
+- **Session Key** — paste your Claude `sessionKey` cookie (the web UI has a "How to get your Session Key" guide with step-by-step instructions)
+- **Organization** — select your org and click Save & Fetch Now
+
+The app will immediately fetch your usage and push it to TRMNL. It continues fetching automatically every 15 minutes.
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `WEB_PASSWORD` | Yes | `changeme` | Password for the web config UI |
+| `FETCH_INTERVAL_MINUTES` | No | `15` | How often to fetch usage data (minutes) |
 
 ## How Projections Work
 
