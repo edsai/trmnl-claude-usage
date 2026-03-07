@@ -1,0 +1,12 @@
+- keyname: author_bio
+  name: Claude Usage
+  field_type: author_bio
+  description: "Track your Claude Pro/Team API usage on your TRMNL dashboard. Shows session %, weekly Opus/Sonnet usage, and projections."
+  author: edsai
+  link: https://github.com/edsai/trmnl-claude-usage
+  support: https://github.com/edsai/trmnl-claude-usage/issues
+
+- keyname: webhook_url
+  name: Webhook URL
+  field_type: copyable_webhook_url
+  description: "Paste this URL into your trmnl-claude-usage .env or web config."

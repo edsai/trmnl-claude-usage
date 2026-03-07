@@ -48,126 +48,13 @@ Then open `http://localhost:8085` in your browser to configure.
 3. Select your organization
 4. Enter your TRMNL webhook URL (`https://usetrmnl.com/api/custom_plugins/YOUR_UUID`)
 
-## TRMNL Template
+## TRMNL Plugin Setup
 
-Create a **Private Plugin** in your TRMNL dashboard, then paste the following Liquid/HTML template into the **Markup** editor:
-
-<details>
-<summary>Click to expand template</summary>
-
-```html
-<div class="screen">
-  <div class="view view--full">
-    {% if status == "healthy" %}
-    <div class="layout layout--col gap--space-between">
-
-      <!-- Row 1: Session hero + weekly stats -->
-      <div class="grid stretch-y">
-        <div class="col col--span-3">
-          <div class="item grow">
-            <div class="meta"></div>
-            <div class="content flex flex--col flex--center-x flex--center-y" style="width: 100%; align-items: center; justify-content: center;">
-              <span class="value value--xxlarge" data-fit-value="true">{{ session_pct }}%</span>
-              <span class="label label--underline">Session</span>
-            </div>
-          </div>
-        </div>
-        <div class="col col--span-3 gap--medium">
-          <div class="item">
-            <div class="meta"></div>
-            <div class="content">
-              <span class="label">Resets at {{ session_reset }}</span>
-            </div>
-          </div>
-          <div style="background: #ddd; height: 8px; border-radius: 4px; overflow: hidden;">
-            <div style="background: #000; height: 100%; width: {{ session_pct }}%; border-radius: 4px;"></div>
-          </div>
-          <div class="item">
-            <div class="meta"></div>
-            <div class="content">
-              <span class="value value--large" data-fit-value="true">{{ opus_weekly_pct }}%</span>
-              <span class="label">Opus Weekly</span>
-            </div>
-          </div>
-          <div class="item">
-            <div class="meta"></div>
-            <div class="content">
-              <span class="value value--large" data-fit-value="true">{{ sonnet_weekly_pct }}%</span>
-              <span class="label">Sonnet Weekly</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Row 2: Projections -->
-      <div class="columns">
-        {% if hits_limit_date != "" %}
-        <div class="column">
-          <span class="label label--underline">Hits Limit</span>
-          <span class="value value--large" data-fit-value="true">{{ hits_limit_date }}</span>
-          <span class="description">in {{ hits_limit_days }}</span>
-        </div>
-        {% else %}
-        <div class="column">
-          <span class="label label--underline">At Reset</span>
-          <span class="value value--large" data-fit-value="true">~{{ projected_at_reset }}%</span>
-        </div>
-        {% endif %}
-        <div class="column">
-          <span class="label label--underline">Today</span>
-          <span class="value value--large" data-fit-value="true">{{ today_usage }}%</span>
-        </div>
-        <div class="column">
-          <span class="label label--underline">Avg Pace</span>
-          <span class="value value--large" data-fit-value="true">{{ avg_daily_pace }}%</span>
-          <span class="label">/day</span>
-        </div>
-        <div class="column">
-          <span class="label label--underline">Budget</span>
-          <span class="value value--large" data-fit-value="true">{{ budget_per_day }}%</span>
-          <span class="label">/day</span>
-        </div>
-      </div>
-
-    </div>
-
-    {% elsif status == "expired" %}
-    <div class="layout layout--col" style="height: 100%; justify-content: center; align-items: center; text-align: center;">
-      <span class="value" style="font-size: 28px;">Session Key Expired</span>
-      <div style="margin-top: 16px;">
-        <span class="description">Update at:</span>
-        <br>
-        <span class="label" style="font-size: 18px;">{{ config_url }}</span>
-      </div>
-      {% if last_valid %}
-      <div style="margin-top: 24px;">
-        <span class="description">Last valid data: {{ last_valid }}</span>
-      </div>
-      {% endif %}
-    </div>
-
-    {% else %}
-    <div class="layout layout--col" style="height: 100%; justify-content: center; align-items: center; text-align: center;">
-      <span class="value" style="font-size: 28px;">Setup Required</span>
-      <div style="margin-top: 16px;">
-        <span class="description">Configure at:</span>
-        <br>
-        <span class="label" style="font-size: 18px;">{{ config_url }}</span>
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="title_bar">
-      <span class="title">Claude Usage</span>
-      <span class="instance">{{ updated_at }}</span>
-    </div>
-  </div>
-</div>
-```
-
-</details>
+1. Create a **Private Plugin** in your TRMNL dashboard
+2. Set Strategy to **Webhook**
+3. Copy the webhook URL into the web UI at `http://localhost:8085`
+4. In the plugin **Markup** editor, paste the contents of [`src/app/trmnl-template.html`](src/app/trmnl-template.html)
+   - The template includes layouts for full, half, and quadrant views
 
 ## How Projections Work
 

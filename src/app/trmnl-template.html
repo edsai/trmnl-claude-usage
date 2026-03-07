@@ -1,14 +1,13 @@
 <div class="screen">
-  <div class="view view--full">
+  <div class="view">
     {% if status == "healthy" %}
     <div class="layout layout--col gap--space-between">
 
-      <!-- Row 1: Session hero + weekly stats -->
       <div class="grid stretch-y">
         <div class="col col--span-3">
           <div class="item grow">
             <div class="meta"></div>
-            <div class="content flex flex--col flex--center-x flex--center-y" style="width: 100%; align-items: center; justify-content: center;">
+            <div class="content flex flex--col flex--center-x flex--center-y stretch-x">
               <span class="value value--xxlarge" data-fit-value="true">{{ session_pct }}%</span>
               <span class="label label--underline">Session</span>
             </div>
@@ -21,8 +20,10 @@
               <span class="label">Resets at {{ session_reset }}</span>
             </div>
           </div>
-          <div style="background: #ddd; height: 8px; border-radius: 4px; overflow: hidden;">
-            <div style="background: #000; height: 100%; width: {{ session_pct }}%; border-radius: 4px;"></div>
+          <div class="progress-bar progress-bar--small">
+            <div class="track">
+              <div class="fill" style="width: {{ session_pct }}%"></div>
+            </div>
           </div>
           <div class="item">
             <div class="meta"></div>
@@ -43,7 +44,6 @@
 
       <div class="divider"></div>
 
-      <!-- Row 2: Projections -->
       <div class="columns">
         {% if hits_limit_date != "" %}
         <div class="column">
@@ -76,33 +76,152 @@
     </div>
 
     {% elsif status == "expired" %}
-    <div class="layout layout--col" style="height: 100%; justify-content: center; align-items: center; text-align: center;">
-      <span class="value" style="font-size: 28px;">Session Key Expired</span>
-      <div style="margin-top: 16px;">
-        <span class="description">Update at:</span>
-        <br>
-        <span class="label" style="font-size: 18px;">{{ config_url }}</span>
-      </div>
+    <div class="layout layout--col layout--center gap--medium">
+      <span class="value value--large">Session Key Expired</span>
+      <span class="description">Update at:</span>
+      <span class="label">{{ config_url }}</span>
       {% if last_valid %}
-      <div style="margin-top: 24px;">
-        <span class="description">Last valid data: {{ last_valid }}</span>
-      </div>
+      <span class="description">Last valid data: {{ last_valid }}</span>
       {% endif %}
     </div>
 
     {% else %}
-    <div class="layout layout--col" style="height: 100%; justify-content: center; align-items: center; text-align: center;">
-      <span class="value" style="font-size: 28px;">Setup Required</span>
-      <div style="margin-top: 16px;">
-        <span class="description">Configure at:</span>
-        <br>
-        <span class="label" style="font-size: 18px;">{{ config_url }}</span>
-      </div>
+    <div class="layout layout--col layout--center gap--medium">
+      <span class="value value--large">Setup Required</span>
+      <span class="description">Configure at:</span>
+      <span class="label">{{ config_url }}</span>
     </div>
     {% endif %}
 
     <div class="title_bar">
       <span class="title">Claude Usage</span>
+      <span class="instance">{{ updated_at }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="view">
+    {% if status == "healthy" %}
+    <div class="layout layout--col gap--space-between">
+      <div class="flex flex--col flex--center-x flex--center-y grow">
+        <span class="value value--xxxlarge" data-fit-value="true">{{ session_pct }}%</span>
+        <span class="label label--underline">Session</span>
+        <div class="progress-bar progress-bar--small stretch-x">
+          <div class="track">
+            <div class="fill" style="width: {{ session_pct }}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="columns">
+        <div class="column">
+          <span class="value value--large" data-fit-value="true">{{ opus_weekly_pct }}%</span>
+          <span class="label">Opus</span>
+        </div>
+        <div class="column">
+          <span class="value value--large" data-fit-value="true">{{ sonnet_weekly_pct }}%</span>
+          <span class="label">Sonnet</span>
+        </div>
+      </div>
+    </div>
+
+    {% elsif status == "expired" %}
+    <div class="layout layout--col layout--center gap--medium">
+      <span class="value value--large">Session Key Expired</span>
+      <span class="description">Update at: {{ config_url }}</span>
+    </div>
+
+    {% else %}
+    <div class="layout layout--col layout--center gap--medium">
+      <span class="value value--large">Setup Required</span>
+      <span class="description">Configure at: {{ config_url }}</span>
+    </div>
+    {% endif %}
+
+    <div class="title_bar">
+      <span class="title">Claude Usage</span>
+      <span class="instance">{{ updated_at }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="view">
+    {% if status == "healthy" %}
+    <div class="layout layout--col gap--space-between">
+      <div class="grid stretch-y">
+        <div class="col col--span-3">
+          <div class="item grow">
+            <div class="meta"></div>
+            <div class="content flex flex--col flex--center-x flex--center-y stretch-x">
+              <span class="value value--xxlarge" data-fit-value="true">{{ session_pct }}%</span>
+              <span class="label label--underline">Session</span>
+            </div>
+          </div>
+        </div>
+        <div class="col col--span-3 gap--small">
+          <div class="item">
+            <div class="meta"></div>
+            <div class="content">
+              <span class="value value--large" data-fit-value="true">{{ opus_weekly_pct }}%</span>
+              <span class="label">Opus Weekly</span>
+            </div>
+          </div>
+          <div class="item">
+            <div class="meta"></div>
+            <div class="content">
+              <span class="value value--large" data-fit-value="true">{{ sonnet_weekly_pct }}%</span>
+              <span class="label">Sonnet Weekly</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% elsif status == "expired" %}
+    <div class="layout layout--col layout--center">
+      <span class="value">Expired</span>
+    </div>
+
+    {% else %}
+    <div class="layout layout--col layout--center">
+      <span class="value">Setup Required</span>
+    </div>
+    {% endif %}
+
+    <div class="title_bar">
+      <span class="title">Claude Usage</span>
+      <span class="instance">{{ updated_at }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="view">
+    {% if status == "healthy" %}
+    <div class="layout layout--col layout--center gap--small">
+      <span class="value value--xxlarge" data-fit-value="true">{{ session_pct }}%</span>
+      <span class="label label--underline">Session</span>
+      <div class="progress-bar progress-bar--small stretch-x">
+        <div class="track">
+          <div class="fill" style="width: {{ session_pct }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    {% elsif status == "expired" %}
+    <div class="layout layout--col layout--center">
+      <span class="value value--small">Expired</span>
+    </div>
+
+    {% else %}
+    <div class="layout layout--col layout--center">
+      <span class="value value--small">Setup</span>
+    </div>
+    {% endif %}
+
+    <div class="title_bar">
+      <span class="title">Claude</span>
       <span class="instance">{{ updated_at }}</span>
     </div>
   </div>
