@@ -107,6 +107,16 @@
         </form>
         {% else %}
         {# Step 1: Session key input #}
+        <details{% if not has_credentials %} open{% endif %} style="margin-bottom: 12px;">
+            <summary style="cursor: pointer; color: #d4a574;">How to get your Session Key</summary>
+            <ol style="margin: 8px 0; padding-left: 20px; line-height: 1.8; font-size: 0.9em;">
+                <li>Open <a href="https://claude.ai" target="_blank">claude.ai</a> and log in</li>
+                <li>Open DevTools (<strong>F12</strong> or <strong>Cmd+Opt+I</strong>)</li>
+                <li>Go to <strong>Application</strong> tab &rarr; <strong>Cookies</strong> &rarr; <strong>https://claude.ai</strong></li>
+                <li>Find the cookie named <strong>sessionKey</strong></li>
+                <li>Copy its value (starts with <code>sk-ant-</code>)</li>
+            </ol>
+        </details>
         <form method="post" action="/config/session-key">
             <label class="label">Session Key (starts with sk-ant-)</label>
             <textarea name="session_key" rows="3" placeholder="Paste your Claude session key here">{{ session_key or "" }}</textarea>
