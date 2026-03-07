@@ -88,6 +88,10 @@
     <div class="card">
         <h2>Configuration</h2>
 
+        {% if config_error %}
+        <p style="color: #e74c3c; margin-bottom: 12px;">{{ config_error }}</p>
+        {% endif %}
+
         {% if orgs %}
         {# Step 2: Org selection (session key validated, orgs fetched) #}
         <p style="color: #2ecc71; margin-bottom: 12px;">Session key valid. Select your organization:</p>
@@ -104,7 +108,7 @@
         {% else %}
         {# Step 1: Session key input #}
         <form method="post" action="/config/session-key">
-            <label class="label">Session Key</label>
+            <label class="label">Session Key (starts with sk-ant-)</label>
             <textarea name="session_key" rows="3" placeholder="Paste your Claude session key here">{{ session_key or "" }}</textarea>
             <button type="submit">Validate &amp; Fetch Orgs</button>
         </form>
@@ -113,6 +117,36 @@
         {% if saved %}
         <p class="success">Credentials saved. Fetching usage...</p>
         {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>TRMNL Plugin Setup</h2>
+        <form method="post" action="/config/webhook">
+            <label class="label">Webhook URL</label>
+            <input type="text" name="webhook_url" value="{{ webhook_url or '' }}" placeholder="https://usetrmnl.com/api/custom_plugins/...">
+            <button type="submit" style="margin-bottom: 12px;">Save Webhook URL</button>
+        </form>
+        {% if webhook_url %}
+        <div class="row" style="margin-bottom: 8px;">
+            <span class="label">Status</span>
+            <span class="value ok">Configured</span>
+        </div>
+        {% endif %}
+        <details{% if not webhook_url %} open{% endif %}>
+            <summary style="cursor: pointer; color: #d4a574; margin: 8px 0;">Setup Instructions</summary>
+            <ol style="margin: 12px 0; padding-left: 20px; line-height: 1.8;">
+                <li>Go to <a href="https://trmnl.com/plugins" target="_blank">trmnl.com/plugins</a></li>
+                <li>Click <strong>"Private Plugin"</strong> &rarr; give it a name (e.g. "Claude Usage")</li>
+                <li>Set Strategy to <strong>"Webhook"</strong></li>
+                <li>Copy the full <strong>webhook URL</strong> shown</li>
+                <li>Paste it in the field above and click <strong>Save Webhook URL</strong></li>
+                <li>In the TRMNL plugin editor, click <strong>"Markup"</strong> tab and paste the template below</li>
+            </ol>
+            {% if trmnl_template %}
+            <p class="label" style="margin-top: 12px;">Liquid Template (copy &amp; paste into TRMNL plugin Markup):</p>
+            <textarea rows="12" readonly onclick="this.select()" style="font-size: 12px;">{{ trmnl_template }}</textarea>
+            {% endif %}
+        </details>
     </div>
 
     <div class="card">
