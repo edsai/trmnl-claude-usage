@@ -37,17 +37,19 @@ scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from datetime import datetime, timedelta, timezone
+
+    # Schedule the first run 30 seconds after startup, then every interval
+    first_run = datetime.now(timezone.utc) + timedelta(seconds=30)
     scheduler.add_job(
         usage_scheduler.fetch_and_push,
         "interval",
         minutes=FETCH_INTERVAL_MINUTES,
         id="fetch_and_push",
-        next_run_time=None,
+        next_run_time=first_run,
     )
     scheduler.start()
-    logger.info(f"Scheduler started: fetching every {FETCH_INTERVAL_MINUTES} min")
-    import asyncio
-    asyncio.get_event_loop().call_later(5, lambda: asyncio.ensure_future(usage_scheduler.fetch_and_push()))
+    logger.info(f"Scheduler started: fetching every {FETCH_INTERVAL_MINUTES} min (first run in 30s)")
     yield
     scheduler.shutdown()
 
